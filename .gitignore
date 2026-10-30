@@ -1,0 +1,18 @@
+
+# Local and generated files
+extra info/
+build_dir/
+build/
+dist/
+.venv/
+__pycache__/
+*.pyc
+*.gguf
+*.flatpak
+.env*
+*.key
+*.pem
+*.pcap
+*.pcapng
+local-repo*/
+.flatpak-builder/
