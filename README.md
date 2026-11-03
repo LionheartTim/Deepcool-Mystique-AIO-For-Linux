@@ -1,125 +1,318 @@
 # DeepCool MYSTIQUE Control Hub
 
-An independent **Linux / Qt 6** control application for the **DeepCool MYSTIQUE 360 ARGB** liquid cooler. It provides display and GIF management, live system metrics, RGB mode selection, diagnostics, and KDE Plasma tray integration.
+**Version 1.3.1 | Linux | Qt 6 | Flatpak**
 
-This is a community-developed project by **LionheartTim**. It is not an official DeepCool application.
+A graphical Linux application for monitoring and controlling the **DeepCool MYSTIQUE 360 ARGB** liquid cooler.
 
-> **Hardware scope:** Development and physical testing have focused on the MYSTIQUE 360 ARGB, USB **VID:PID `3633:0009`**. Other models and USB IDs have not been verified.
+DeepCool MYSTIQUE Control Hub provides live system metrics, LCD display management, GIF uploads, RGB controls, diagnostics and desktop integration.
+
+> **Unofficial community project.** This software is not affiliated with, sponsored by or endorsed by DeepCool.
 
 ## Features
 
-- Re-designed te GUI.
-- Manage up to **five GIF slots**, including drag-and-drop, preview, upload, selection, and deletion.
-- Switch between the custom GIF display and system metrics; select screen rotation and display brightness.
-- Display live CPU, GPU, memory, and related system measurements where Linux exposes suitable sensor data.
-- Select **Motherboard RGB**, **Temperature RGB**, or **GIF Motion RGB** modes.
-- View read-only hardware/USB/sensor diagnostics, recent events, and thermal alerts.
-- Keep application settings and GIF metadata across restarts.
-- Minimize to the KDE Plasma system tray, with a **Start with KDE Plasma** switch in **About**.
-- Use a guarded, one-time first-launch media cleanup to prepare previously used cooler media storage.
+### LCD and GIF Management
 
-### RGB behavior and limitations
+- Upload and manage animated GIFs on the cooler's LCD display.
+- Manage up to five GIF slots.
+- Drag-and-drop GIF import.
+- GIF cropping, positioning and preview controls.
+- Display rotation and brightness controls.
+- Delete selected GIFs.
+- Local upload status tracking and recovery safeguards.
 
-- **Motherboard RGB:** The physical lighting is controlled by the motherboard's existing RGB settings. No OpenRGB, Armoury Crate, or other additional RGB-control application is required by this project. The application's animated **`(rgb simulation)`** preview is *not* a live readback of the motherboard's LED colors.
-- **GIF Motion RGB:** Works with the cooler's physical pump lighting on the tested device.
-- **Temperature RGB:** The GUI temperature-color preview works, but on the tested cooler the **physical pump lighting remains white**. This is a known unresolved firmware/hardware behavior, **not a claim of working physical temperature-based RGB**.
+### Live System Metrics
 
-## Hardware and testing
+Monitor eight system measurements:
 
-| Hardware or function | Status |
-| --- | --- |
-| DeepCool MYSTIQUE 360 ARGB (`3633:0009`) | Tested on real hardware |
-| AMD Ryzen 9 9950X3D metrics | Tested on real hardware |
-| AMD Radeon RX 9070 XT metrics | Tested on real hardware |
-| GIF upload, selection, delete, brightness, rotation | Tested on real hardware |
-| GIF Motion RGB and motherboard-controlled physical lighting | Tested on real hardware |
-| Intel CPU / Intel GPU readers | Implemented; **not** tested on physical Intel hardware |
-| NVIDIA GPU reader | Implemented; **not** tested on physical NVIDIA hardware; Flatpak availability of `nvidia-smi` is not verified |
-| Other DeepCool models and Linux distributions | Not verified |
+- CPU temperature
+- CPU load
+- CPU clock speed
+- RAM usage
+- GPU temperature
+- GPU load
+- GPU clock speed
+- VRAM usage
 
-The confirmed development environment is **Bazzite Linux with KDE Plasma**. Sensor availability and accuracy may differ across kernels, hardware, drivers, and Flatpak installations.
+The application includes vendor-aware sensor handling for supported AMD, Intel and NVIDIA hardware. Sensor availability depends on the system and drivers.
 
-## Install the Flatpak bundle
+### RGB Controls
 
-The project's Flatpak application ID is:
+Three selectable RGB modes:
 
-`io.github.lionhearttim.deepcool-gui`
+- Motherboard RGB
+- Temperature RGB
+- GIF Motion RGB
 
-Download or build the `.flatpak` bundle, then choose **one** installation type:
+The interface includes RGB preview effects and brightness controls. Some effects are visual simulations; the application does not independently read back every hardware lighting state.
+
+### Diagnostics
+
+A dedicated Diagnostics tab provides:
+
+- CPU and GPU hardware information.
+- Active sensor sources.
+- USB connection information.
+- GIF management status.
+- Upload and deletion safety information.
+- Live application event logging.
+- Temperature warning indicators.
+
+Diagnostics are designed to provide information without changing hardware settings.
+
+### Desktop Integration
+
+- Native Qt 6 desktop interface.
+- KDE Plasma and system-tray integration.
+- Optional automatic startup at login.
+- Minimized background operation.
+- Persistent application settings.
+- Wayland and X11 support through Flatpak.
+
+Closing the main window can leave the application running in the system tray so live hardware updates continue.
+
+## Supported Hardware
+
+| Device | USB ID | Status |
+|---|---|---|
+| DeepCool MYSTIQUE 360 ARGB | `3633:0009` | Tested |
+| Other DeepCool models | Varies | Not verified |
+
+Support for other DeepCool devices must not be assumed.
+
+## Installation
+
+### Recommended: Flatpak
+
+Download the latest release bundle from:
+
+https://github.com/LionheartTim/Deepcool-Mystique-AIO-Linux-with-dashboard/releases
+
+For version 1.3.1, the tested package is built against **KDE Platform 6.10**.
+
+Install the downloaded bundle:
 
 ```bash
-# Install for the current user
-flatpak install --user --bundle io.github.lionhearttim.deepcool-gui.flatpak
-
-# OR install system-wide
-flatpak install --system --bundle io.github.lionhearttim.deepcool-gui.flatpak
+flatpak install --user ./io.github.lionhearttim.deepcool-gui-v1.3.1-qt610.flatpak
 ```
 
-Start the application:
+Launch the application:
 
 ```bash
 flatpak run io.github.lionhearttim.deepcool-gui
 ```
 
-Do not install both variants unless you intentionally manage them separately. Normal operation requires access to the cooler's USB interface; Flatpak permissions alone do **not** replace the host's USB device access rules. The development machine uses a dedicated **`99-deepcool.rules`** udev rule. Check and install the rule appropriate for your distribution and device before expecting USB access. You may need to reconnect the device or log out and back in after changing udev permissions.
+The KDE Platform 6.10 runtime must be available. If Flatpak cannot resolve it automatically, make sure Flathub is configured and install the appropriate runtime.
 
-The build currently grants broad `home` filesystem and device access to preserve the existing local settings, GIF files, and USB behavior. Review the Flatpak manifest before installing on other machines.
+### Important: USB Permissions
 
-## Important: first launch may delete media on the cooler
+**Flatpak installation does not automatically grant access to the cooler's USB interface.**
 
-**Read this before running the app for the first time.**
+The host operating system must allow the current desktop user to open and claim the device:
 
-On a fresh installation, **First Launch Setup** can request a **one-time, irreversible deletion** of existing **GIF and image files** stored on the cooler (`SD:GIF` and `SD:IMG`). This is intended to clear media left by the original Windows software so that the Linux GIF-slot manager can work reliably.
+- USB vendor ID: `3633`
+- USB product ID: `0009`
+- USB interface: `0`
 
-- **Files on the cooler are deleted**; locally stored GIF files on your PC are not the target of this operation.
-- The app asks for explicit confirmation before issuing the deletion request.
-- After sending the command, the app allows **120 seconds** for the device to process it. Do not disconnect or operate the cooler during this period.
-- A USB acknowledgement does **not** independently prove that all SD-card deletions have finished.
-- To avoid unintended repeat deletions, uncertain or previously attempted cleanup operations are **not automatically retried**.
-- If you cancel the setup, older Windows GIFs/images may remain, and GIF management might not work properly.
+On a system without suitable host permissions, the cooler may appear in `lsusb` while remaining inaccessible to the application.
 
-This command was previously investigated and tested on the development cooler, including subsequent GIF upload/delete operation. It is **not** a general-purpose SD-card formatter.
+A separate host-side USB permissions installer may be supplied with the release. It requires explicit user approval and must be executed outside the Flatpak sandbox.
 
-## KDE Plasma autostart
+Do not assume that installing the `.flatpak` bundle also installs udev rules.
 
-After the app has been **opened once** and initial media setup is complete, it enables KDE autostart by default. At the **next login**, it starts minimized in the system tray.
+The new USB access handling has been tested locally. Fresh-installation behavior on PikaOS and other Linux distributions still requires independent verification.
 
-To opt out, open **About** and uncheck **Start with KDE Plasma (minimized to system tray)**. Your choice is retained across subsequent starts.
+## First Launch Setup — Important Warning
 
-> Installing a Flatpak package by itself cannot immediately launch the app or enable an interactive user-session autostart. The first manual launch is required.
+On an installation without a recorded successful First Launch Setup, the application may request one-time media initialization.
 
-## Build from source
+**Warning: This operation permanently deletes all GIFs and images stored in the cooler's internal media storage.**
 
-The application is written in **C++17** with **Qt 6 Widgets** and **libusb-1.0**. GIF preparation also uses **ImageMagick**.
+Specifically, the cleanup targets:
 
-For a native build, install the required Qt 6 development tools, a C++ compiler, qmake, libusb development headers, and ImageMagick, then run from the project root:
+- `SD:GIF`
+- `SD:IMG`
+
+The operation does not format the complete SD card, replace firmware or reset general firmware settings.
+
+Before asking for confirmation, version 1.3.1 checks whether the application can access the USB device. This access check does not send a media cleanup command.
+
+If you approve the cleanup:
+
+1. The application submits a single cleanup request.
+2. Keep the cooler connected.
+3. Do not interrupt the application during the 120-second waiting period.
+4. Follow the application's completion instructions.
+
+A USB acknowledgement confirms that the command was accepted. It does **not** independently prove that media deletion has finished.
+
+For safety, the application will not automatically repeat a previously attempted cleanup with an uncertain result.
+
+**Do not delete or reset first-launch state records merely to force the cleanup to run again.**
+
+## Using the Application
+
+### Display Management
+
+Open the **Display management** tab to select a GIF slot, import media, adjust the crop and configure the LCD presentation.
+
+The interface provides controls for display rotation, brightness and RGB modes.
+
+### System Metrics
+
+Open **Systeem Metrics** to view the live CPU, GPU and memory monitoring panels.
+
+Sensor values depend on available drivers and Linux hardware interfaces.
+
+### Diagnostics
+
+Open **Diagnostics** to inspect hardware information, active sensor sources, USB connection details and application events.
+
+### Autostart
+
+The application can configure per-user desktop autostart following successful First Launch Setup.
+
+Autostart can be managed in the **About** tab.
+
+The application may run minimized through the system tray.
+
+## Building from Source
+
+### Requirements
+
+- A Linux development environment
+- C++17-compatible compiler
+- Qt 6 development packages, including Qt Widgets
+- Qt 6 qmake
+- libusb 1.0 development files
+- GNU Make
+
+From the project source directory:
 
 ```bash
 qmake6 -o Makefile deepcool-gui-qt6.pro
 make -j2
+```
+
+Run the resulting native executable:
+
+```bash
 ./deepcool-gui-qt6
 ```
 
-For a Flatpak bundle, install `flatpak-builder`, configure the Flathub remote, and run the project's **V2 packaging script** from the source directory:
+### Flatpak Build Compatibility
 
-```bash
-bash ./build_mystique_flatpak_current_v2.sh "$PWD"
+The v1.3.1 Flatpak was successfully tested after compiling the application with the **KDE 6.10 SDK**.
+
+Do not package an executable built against Qt 6.11 directly into a Qt 6.10 runtime. Doing so can cause:
+
+```text
+version `Qt_6.11' not found
 ```
 
-The build script uses the **current local source tree** and produces `~/Desktop/io.github.lionhearttim.deepcool-gui.flatpak`. It bundles the dependencies needed for the tested Flatpak configuration and explicitly includes the extensionless `aio-preview` pump artwork. It requires the KDE Flatpak runtime/SDK and access to its dependency sources when building.
+Compile the Flatpak executable within a compatible SDK and verify its runtime library dependencies before distributing the bundle.
 
-### AppStream metadata
+The Flatpak manifest and packaging files should be kept consistent with the runtime and application executable used for the release.
 
-`io.github.lionhearttim.deepcool-gui.metainfo.xml` contains application information for software centers. **The current V2 bundle-building script does not yet install this XML file**. Package maintainers should add it to `/app/share/metainfo/` in the Flatpak build before relying on it to appear in software centers. Publishing through Flathub may also require additional screenshots and release metadata.
+## Troubleshooting
 
-## Safety and diagnostics
+### Device detected, but not accessible
 
-This application communicates directly with supported cooler hardware over USB. Do **not** try unknown USB commands, interrupt an active GIF upload or media cleanup, or run a second controller against the same interface. The Diagnostics tab provides read-only information; it is not intended to reset or format the device.
+Check USB detection:
 
-## License and upstream
+```bash
+lsusb | grep -i '3633:0009'
+```
 
-**Source-code licensing has not yet been specified in this repository.** Before public distribution, add a `LICENSE` file with the license you select; do not assume that the metadata license in the AppStream XML grants rights to the C++ source code.
+If the device is listed but the application reports USB access denied, inspect host-side udev permissions.
 
-Project author: **LionheartTim** — [GitHub profile](https://github.com/LionheartTim).
+A Flatpak sandbox permission such as `--device=all` does not by itself correct missing host filesystem permissions or device access controls.
 
-DeepCool, MYSTIQUE, and other product names are trademarks of their respective owners. This independent application is not affiliated with or endorsed by DeepCool.
+### USB interface busy
+
+Close other applications that may be communicating with the cooler, then retry.
+
+### Flatpak does not start
+
+Run it from a terminal:
+
+```bash
+flatpak run io.github.lionhearttim.deepcool-gui
+```
+
+Inspect the reported error, including any missing runtime libraries or incompatible Qt versions.
+
+Check the installed runtime:
+
+```bash
+flatpak info --show-runtime io.github.lionhearttim.deepcool-gui
+```
+
+### Missing system metrics
+
+Open the Diagnostics tab and inspect the active sensor sources.
+
+Some sensors require hardware-specific Linux interfaces or installed GPU drivers.
+
+### GIF operation interrupted
+
+Do not automatically repeat an interrupted upload, deletion or first-launch cleanup.
+
+Review the application's error message and diagnostics before retrying hardware operations.
+
+## Tested Release Status
+
+Version 1.3.1 was functionally tested by the maintainer on Bazzite Linux with a KDE Platform 6.10 Flatpak.
+
+The maintainer confirmed:
+
+- Successful compilation.
+- Successful application startup.
+- Cooler recognition.
+- Working system metrics.
+- Working GIF management.
+- Working RGB controls.
+- Working autostart.
+
+The USB permission improvements are included in the tested release, but the separate host permissions installer has not yet been independently validated on a clean PikaOS installation.
+
+## Reporting Issues
+
+Report problems through the project's GitHub Issues page:
+
+https://github.com/LionheartTim/Deepcool-Mystique-AIO-Linux-with-dashboard/issues
+
+Please include:
+
+- Linux distribution and version.
+- Desktop environment.
+- Application version.
+- Whether installed natively or through Flatpak.
+- Relevant USB detection details.
+- Terminal error messages.
+- Steps required to reproduce the problem.
+
+Avoid including personal or sensitive system information in public reports.
+
+## Project
+
+**Developer:** LionheartTim
+
+**Repository:** https://github.com/LionheartTim/Deepcool-Mystique-AIO-Linux-with-dashboard
+
+**Platform:** Linux
+
+**Language:** C++
+
+**GUI Framework:** Qt 6
+
+**USB Communication:** libusb 1.0
+
+**Packaging:** Flatpak
+
+## License
+
+The existing application metadata declares GPL-3.0. Consult the repository's license file for the authoritative licensing terms.
+
+---
+
+DeepCool MYSTIQUE Control Hub is an independent community-developed Linux project.
