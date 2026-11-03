@@ -1518,6 +1518,149 @@ static const char* const stateKey = "firstLaunchMediaCleanup/status";
 static const char* const oldMarkerRelative =
     "/.local/state/deepcool-mystique/media-cleanup-0x14-attempt.json";
 
+
+// MYSTIQUE USB ACCESS FIX v1.3.1
+// No USB transfers or hardware commands in these helpers.
+
+static QString usbAccessError(int code)
+{
+    switch (code) {
+        case LIBUSB_ERROR_ACCESS:
+            return "USB permission denied for DeepCool MYSTIQUE "
+            "(3633:0009).\n"
+            "Install the DeepCool USB host permissions.";
+
+        case LIBUSB_ERROR_BUSY:
+            return "DeepCool MYSTIQUE USB interface 0 is busy.\n"
+            "Close other programs using the cooler.";
+
+        case LIBUSB_ERROR_NO_DEVICE:
+            return "DeepCool MYSTIQUE was disconnected.";
+
+        default:
+            return QString("DeepCool USB error: %1 (%2).")
+            .arg(QString::fromLatin1(libusb_error_name(code)))
+            .arg(code);
+    }
+}
+
+static bool openUsbInterface(
+    libusb_context* context,
+    libusb_device_handle*& handle,
+    QString& error)
+{
+    handle = nullptr;
+    error.clear();
+
+    libusb_device** devices = nullptr;
+    const ssize_t count =
+    libusb_get_device_list(context, &devices);
+
+    if (count < 0) {
+        error = usbAccessError(static_cast<int>(count));
+        return false;
+    }
+
+    bool found = false;
+    int lastError = LIBUSB_ERROR_NO_DEVICE;
+
+    for (ssize_t i = 0; i < count; ++i) {
+        libusb_device_descriptor desc{};
+
+        if (libusb_get_device_descriptor(
+            devices[i], &desc) != LIBUSB_SUCCESS)
+            continue;
+
+        if (desc.idVendor != 0x3633 ||
+            desc.idProduct != 0x0009)
+            continue;
+
+        found = true;
+
+        libusb_device_handle* candidate = nullptr;
+        int result = libusb_open(devices[i], &candidate);
+
+        if (result != LIBUSB_SUCCESS || !candidate) {
+            lastError = (result == LIBUSB_SUCCESS)
+            ? LIBUSB_ERROR_OTHER : result;
+            if (candidate) libusb_close(candidate);
+            continue;
+        }
+
+        const int kernel =
+        libusb_kernel_driver_active(candidate, 0);
+
+        if (kernel == 1) {
+            lastError = LIBUSB_ERROR_BUSY;
+            libusb_close(candidate);
+            continue;
+        }
+
+        if (kernel < 0 &&
+            kernel != LIBUSB_ERROR_NOT_SUPPORTED) {
+            lastError = kernel;
+        libusb_close(candidate);
+        continue;
+            }
+
+            result = libusb_claim_interface(candidate, 0);
+
+            if (result == LIBUSB_SUCCESS) {
+                handle = candidate;
+                break;
+            }
+
+            lastError = result;
+            libusb_close(candidate);
+    }
+
+    libusb_free_device_list(devices, 1);
+
+    if (handle)
+        return true;
+
+    error = found
+    ? usbAccessError(lastError)
+    : QString("DeepCool MYSTIQUE (3633:0009) "
+    "not found on USB.");
+
+    return false;
+}
+
+static bool checkUsbAccess(QString& error)
+{
+    libusb_context* context = nullptr;
+
+    const int initialized = libusb_init(&context);
+
+    if (initialized != LIBUSB_SUCCESS) {
+        error = usbAccessError(initialized);
+        if (context) libusb_exit(context);
+        return false;
+    }
+
+    libusb_device_handle* handle = nullptr;
+
+    if (!openUsbInterface(context, handle, error)) {
+        libusb_exit(context);
+        return false;
+    }
+
+    const int released =
+    libusb_release_interface(handle, 0);
+
+    libusb_close(handle);
+    libusb_exit(context);
+
+    if (released != LIBUSB_SUCCESS) {
+        error = usbAccessError(released);
+        return false;
+    }
+
+    return true;
+}
+
+
 static bool sendOneTimeCleanup(QString& error, bool& attempted)
 {
     error.clear();
@@ -1537,25 +1680,14 @@ static bool sendOneTimeCleanup(QString& error, bool& attempted)
         if (context) libusb_exit(context);
         return false;
     }
-    handle = libusb_open_device_with_vid_pid(context, 0x3633, 0x0009);
-    if (!handle) {
-        error = "DeepCool MYSTIQUE (3633:0009) is not connected or accessible.";
+
+    if (!openUsbInterface(context, handle, error)) {
         release();
         return false;
     }
-    const int kernel = libusb_kernel_driver_active(handle, 0);
-    if (kernel != 0) {
-        error = "USB interface 0 is occupied or cannot be checked. No detach attempted.";
-        release();
-        return false;
-    }
-    const int claim = libusb_claim_interface(handle, 0);
-    if (claim != LIBUSB_SUCCESS) {
-        error = QString("Cannot claim USB interface 0 (%1).").arg(claim);
-        release();
-        return false;
-    }
+
     claimed = true;
+
 
     // Guard against two concurrently started applications. The lock is held
     // through USB transfer, and the QSettings attempt marker survives a crash.
@@ -3218,6 +3350,22 @@ private:
                 "For safety, this application will not repeat HIDC 0x14.");
             return false;
         }
+
+
+        // Verify USB access before asking for destructive consent.
+        // No cleanup command is sent during this check.
+        QString usbProblem;
+
+        if (!MystiqueFirstLaunch::checkUsbAccess(usbProblem)) {
+            QMessageBox::critical(
+                this,
+                "First Launch Setup - USB Access",
+                usbProblem +
+                "\n\nNo media cleanup was attempted."
+            );
+            return false;
+        }
+
 
         QDialog consent(this);
         consent.setWindowTitle("First-Time Device Setup");
